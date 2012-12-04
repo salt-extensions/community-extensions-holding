@@ -14,6 +14,9 @@ to the minion config files::
     mongo.password: <MongoDB user password>
     mongo.port: 27017
 
+This mongo returner is being developed to replace the default mongodb returner
+in the future and should not be considered api stable yet.
+
 '''
 
 # Import python libs
@@ -33,7 +36,7 @@ log = logging.getLogger(__name__)
 def __virtual__():
     if not has_pymongo:
         return False
-    return 'mongo_return'
+    return 'mongo'
 
 
 def _remove_dots(d):
@@ -82,6 +85,23 @@ def returner(ret):
     col.insert(sdata)
 
 
+def save_load(jid, load):
+    '''
+    Save the load for a given job id
+    '''
+    conn, db = _get_conn()
+    col = db[jid]
+    col.insert(load)
+
+
+def get_load(jid):
+    '''
+    Returnt he load asociated with a given job id
+    '''
+    conn, db = _get_conn()
+    return db[jid].find_one()
+
+
 def get_jid(jid):
     '''
     Return the return information associated with a jid
@@ -105,4 +125,37 @@ def get_fun(fun):
         rdata = db[collection].find_one({'fun': fun})
         if rdata:
             ret[collection] = rdata
+    return ret
+
+
+def get_minions():
+    '''
+    Return a list of minions
+    '''
+    conn, db = _get_conn()
+    ret = []
+    for name in db.collection_names():
+        if len(name) == 20:
+            try:
+                int(name)
+                continue
+            except ValueError:
+                pass
+        ret.append(name)
+    return ret
+
+
+def get_jids():
+    '''
+    Return a list of job ids
+    '''
+    conn, db = _get_conn()
+    ret = []
+    for name in db.collection_names():
+        if len(name) == 20:
+            try:
+                int(name)
+                ret.append(name)
+            except ValueError:
+                pass
     return ret
